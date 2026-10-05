@@ -229,7 +229,7 @@ def host_fingerprint() -> dict:
             if line.startswith("model name"):
                 info["cpu"] = line.split(":", 1)[1].strip()
                 break
-        flags = next((l for l in text.splitlines() if l.startswith("flags")), "")
+        flags = next((line for line in text.splitlines() if line.startswith("flags")), "")
         info["isa"] = sorted(f for f in ("avx2", "avx512f", "avx512_vnni", "fma", "f16c") if f" {f}" in flags)
     except OSError:
         pass

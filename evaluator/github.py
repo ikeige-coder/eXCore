@@ -91,7 +91,7 @@ class GitHubHTTP:
         return PullRequest(
             number=number, head_sha=d["head"]["sha"], base_ref=d["base"]["ref"], author=d["user"]["login"],
             draft=bool(d.get("draft")), state=d["state"], merged=bool(d.get("merged")),
-            labels=tuple(l["name"] for l in d.get("labels", [])),
+            labels=tuple(label["name"] for label in d.get("labels", [])),
             head_repo=(d["head"].get("repo") or {}).get("full_name"),
             merge_commit_sha=d.get("merge_commit_sha"),
             merged_by=(d.get("merged_by") or {}).get("login"),
