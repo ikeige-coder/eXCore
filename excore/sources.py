@@ -70,8 +70,10 @@ def verify_sources(lock: dict, root: str | Path, *, cache: str | Path | None = N
     seen: dict = {}
     if cache and Path(cache).exists():
         try:
-            seen = json.loads(Path(cache).read_text())
-        except (OSError, json.JSONDecodeError):
+            seen = json.loads(Path(cache).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            seen = {}
+        if not isinstance(seen, dict):      # valid JSON of the wrong shape is treated as empty
             seen = {}
     new_seen = {}
     for f in lock["sources"]["base"]["files"]:
@@ -90,7 +92,12 @@ def verify_sources(lock: dict, root: str | Path, *, cache: str | Path | None = N
                 continue
         new_seen[f["name"]] = key
     if cache and not problems:
-        Path(cache).write_text(json.dumps(new_seen))
+        try:
+            tmp = Path(str(cache) + ".tmp")
+            tmp.write_text(json.dumps(new_seen), encoding="utf-8")
+            os.replace(tmp, cache)
+        except OSError:
+            pass                            # the cache only saves re-hashing; never fail verification over it
     return problems
 
 

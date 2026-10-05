@@ -152,6 +152,22 @@ def test_pin_verify_and_tamper(lock_and_model):
         load_lock(lock, track="GPU-01")
 
 
+@pytest.mark.parametrize("junk", ["[]", "null", "42", "not json", "\udcff"])
+def test_verify_ignores_malformed_cache(lock_and_model, junk):
+    lock, models = lock_and_model
+    pin(lock, models, repo="org/m", revision="r1", files=["base-bf16.gguf"], llama_cpp_commit="a" * 40)
+    cache = lock.parent / "verified.json"
+    cache.write_bytes(junk.encode("utf-8", "surrogateescape"))
+    assert verify_sources(load_lock(lock), models, cache=cache) == []
+    assert isinstance(json.loads(cache.read_text(encoding="utf-8")), dict)     # rewritten cleanly
+
+
+def test_verify_survives_unwritable_cache(lock_and_model):
+    lock, models = lock_and_model
+    pin(lock, models, repo="org/m", revision="r1", files=["base-bf16.gguf"], llama_cpp_commit="a" * 40)
+    assert verify_sources(load_lock(lock), models, cache=lock.parent / "no-such-dir" / "verified.json") == []
+
+
 def test_sources_cli(lock_and_model, tiny_config):
     lock, models = lock_and_model
     assert main(["--config", tiny_config, "sources", "verify", "--lock", str(lock), "--root", str(models)]) == 1
