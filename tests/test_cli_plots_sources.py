@@ -68,6 +68,28 @@ def test_check_command_exit_codes(tiny_config, tmp_path, capsys):
     assert "unknown quantizer" in capsys.readouterr().err
 
 
+OVERRIDDEN = RTN.format(n="dead") + "  - {match: 'L*.mlp', format: Q5_0}\n  - {match: 'L*.mlp', format: Q8_0}\n"
+
+
+def test_screen_counts_units_per_rule(tiny_spec, tiny_cfg):
+    r = screen(parse_manifest(OVERRIDDEN, tiny_spec), tiny_spec, tiny_cfg)
+    assert r.rule_units[0] == 1                         # lm_head
+    assert r.rule_units[1] == 0 and r.unused_rules == (1,)   # fully overridden by rule 2
+    assert r.rule_units[2] > 0
+    assert sum(r.rule_units) + r.default_units == r.units
+    clean = screen(parse_manifest(RTN.format(n="clean"), tiny_spec), tiny_spec, tiny_cfg)
+    assert clean.unused_rules == ()
+
+
+def test_check_warns_about_rules_with_no_effect(tiny_config, tmp_path, capsys):
+    p = tmp_path / "dead.yaml"
+    p.write_text(OVERRIDDEN)
+    assert main(["--config", tiny_config, "check", str(p)]) == 0          # a warning, not an error
+    cap = capsys.readouterr()
+    assert "the manifest is legal" in cap.out and "units stay on the default" in cap.out
+    assert "rule 1" in cap.err and "has no effect" in cap.err and "rule 2" not in cap.err
+
+
 def test_check_flags_a_recipe_over_the_ram_ceiling(capsys):
     assert main(["check", str(ROOT / "experiments/base_variants/V0_baseline.yaml")]) == 0
     big = ROOT / "tests" / "_big_tmp.yaml"

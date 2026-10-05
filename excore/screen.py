@@ -33,6 +33,13 @@ class ScreenReport:
     embedding_gib: float = 0.0
     avg_bits_per_weight: float = 0.0
     ceiling_gib: float = 0.0
+    rule_units: tuple[int, ...] = ()      # units each rule still owns once every later rule has been applied
+    default_units: int = 0                # units left on the manifest default
+
+    @property
+    def unused_rules(self) -> tuple[int, ...]:
+        """Indices of rules that end up owning no unit because later rules override all of theirs."""
+        return tuple(i for i, n in enumerate(self.rule_units) if n == 0)
 
     @property
     def file_gib(self) -> float:
@@ -55,8 +62,15 @@ def screen(manifest: Manifest, spec: ModelSpec, cfg: Mapping) -> ScreenReport:
     formats: dict[str, int] = {}
     total_bytes = 0.0
     total_params = 0
+    rule_units = [0] * len(manifest.rules)
+    default_units = 0
     for u in units:
-        fmt = resolve_format(assignments[u.name].format)
+        a = assignments[u.name]
+        if a.rule < 0:
+            default_units += 1
+        else:
+            rule_units[a.rule] += 1
+        fmt = resolve_format(a.format)
         formats[fmt.name] = formats.get(fmt.name, 0) + 1
         total_bytes += fmt.bytes_for(u.params)
         total_params += u.params
@@ -71,4 +85,6 @@ def screen(manifest: Manifest, spec: ModelSpec, cfg: Mapping) -> ScreenReport:
         embedding_gib=embedding / GIB,
         avg_bits_per_weight=total_bytes * 8 / total_params,
         ceiling_gib=float(cfg["limits"]["max_peak_rss_gib"]),
+        rule_units=tuple(rule_units),
+        default_units=default_units,
     )

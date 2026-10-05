@@ -41,6 +41,13 @@ def cmd_check(args) -> int:
     print(f"units      {r.units}   formats: " + ", ".join(f"{k} x{v}" for k, v in r.formats.items()))
     print(f"size       ~{r.file_gib:.1f} GiB file, ~{r.est_ram_gib:.1f} GiB RAM (estimate), "
           f"{r.avg_bits_per_weight:.2f} bits/weight on searchable units")
+    if m.rules:
+        print(f"rules      {len(m.rules)} ({r.default_units} units stay on the default)")
+        for i in r.unused_rules:
+            rule = m.rules[i]
+            layers = f" layers {rule.layers[0]}..{rule.layers[-1]}" if rule.layers else ""
+            print(f"warning: rule {i} (match {rule.match!r}{layers} -> {rule.format}) has no effect: "
+                  "later rules override every unit it matches", file=sys.stderr)
     if not r.within_ceiling:
         print(f"over the {r.ceiling_gib:.1f} GiB RAM ceiling: this recipe would fail the RAM gate", file=sys.stderr)
         return 3
