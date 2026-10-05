@@ -1,0 +1,18 @@
+{
+  "schema": "excore/sources@1",
+  "track": "CPU-35B",
+  "note": "Unpinned. Run scripts/download_models.sh --lock (or `excore sources pin`) after the first verified download. While base.files is empty or any hash is null, the evaluator refuses to run.",
+  "sources": {
+    "base": {
+      "description": "Unquantized BF16 GGUF of the model (the fidelity reference and the input of every build)",
+      "repo": null,
+      "revision": null,
+      "files": []
+    },
+    "llama_cpp": {
+      "description": "llama.cpp checkout used for llama-quantize and llama-bench",
+      "repo": "https://github.com/ggml-org/llama.cpp",
+      "commit": null
+    }
+  }
+}

@@ -1,0 +1,81 @@
+# eXCore base-engine track CPU-27B (27B), kept for reference and as proof that a track is just a config.
+# Not deployable as shipped: it needs its own sources lock and spectrum (the repo's lock is for CPU-35B).
+# eXCore track CPU-27B: every evaluation constraint lives here.
+# Changing any value changes the track; results from different configs are not comparable.
+track: CPU-27B
+description: Qwen3.8-27B on commodity CPU + system RAM (llama.cpp, AVX2/NEON)
+
+model:
+  name: qwen3.8-27b
+  num_layers: 64
+  attention_every: 4          # layer i is full attention when (i + 1) % 4 == 0, else Gated DeltaNet
+  hidden_size: 5120
+  intermediate_size: 17408
+  vocab_size: 248320
+  attn:
+    num_heads: 24
+    num_kv_heads: 4
+    head_dim: 256
+  gdn:
+    num_key_heads: 16
+    key_head_dim: 128
+    num_value_heads: 48
+    value_head_dim: 128
+
+runtime:
+  engine: llama.cpp
+  commit: UNPINNED            # filled in by scripts/setup_bench.sh and then locked
+  cmake_flags: ["GGML_NATIVE=OFF", "GGML_AVX2=ON", "GGML_CUDA=OFF", "GGML_METAL=OFF"]
+  isa: [avx2, neon]
+
+limits:
+  threads: 8                  # fixed so results do not depend on the host core count
+  batch_size: 512
+  ubatch_size: 512
+  mlock: false
+  max_peak_rss_gib: 28.0      # hard ceiling: candidates above this are rejected
+  min_free_ram_gib: 4.0       # validator refuses to start a run below this
+  build_timeout_s: 1800
+  eval_timeout_s: 5400
+  perf_runs: 2                # both runs must agree within perf_tolerance
+  perf_tolerance: 0.05
+
+accuracy:
+  metric: rp_kl               # Reference-Partition KL vs the unquantized reference
+  top_k: 256                  # reference partition: top-k tokens plus one tail bucket
+  corpus: data/corpus
+  ctx: 512                    # window length; the second half of each window is scored
+  max_tokens: 78000           # corpus tokens used (the rest of the corpus is ignored)
+
+perf:
+  prompt_tokens: 4096         # prefill speed is measured on a prompt of this length
+  gen_tokens: 128             # decode speed is measured over this many generated tokens
+
+gates:
+  needle_contexts: [8192, 16384]   # long-context retrieval is checked at these lengths
+  needle_depths: [0.1, 0.5, 0.9]   # where in the document the needle sits (fraction of the filler)
+  needle_max_regression_pct: 0     # a candidate may not retrieve fewer needles than the reference
+  task_guard_max_regression: 25    # default slack (%) for any other task guard
+  max_rp_kl: 0.5                   # candidates drifting further than this are rejected outright
+  min_top1_agreement: 0.5          # share of positions where the argmax must match the reference
+  holdout_min_transfer: 0.5        # share of a public-corpus gain that must reappear on the private holdout
+  holdout_tolerance: 0.005         # slack (fraction of drift) when comparing holdout to public gain
+
+frontier:
+  # A candidate is scored conservatively (noise margins below); incumbents keep their measured
+  # values. A candidate therefore has to beat an incumbent by more than the measurement noise.
+  z: 2.0                           # accuracy margin: rp_kl + z * stderr
+  speed_margin: 0.05               # decode/prefill margin (fraction); keep equal to limits.perf_tolerance
+  ram_margin_gib: 0.25             # RAM margin
+  bounds:                          # each objective is mapped to a 0..1 score inside these bounds
+    rp_kl:   { best: 0.0005, worst: 0.5 }   # log scale; lower is better
+    gen:     { lo: 0.5, hi: 3.0 }           # tokens/s relative to the baseline, log scale
+    prefill: { lo: 0.5, hi: 3.0 }           # prefill tokens/s relative to the baseline, log scale
+    ram_gib: { best: 8.0, worst: 28.0 }     # linear; keep worst equal to limits.max_peak_rss_gib
+
+tiers:                             # min_gain = relative growth of the frontier's dominated volume
+  core:Ultra: { min_gain: 0.250, multiplier: 4.0 }
+  core:XL:    { min_gain: 0.100, multiplier: 2.5 }
+  core:L:     { min_gain: 0.040, multiplier: 1.5 }
+  core:M:     { min_gain: 0.015, multiplier: 1.0 }
+  core:S:     { min_gain: 0.005, multiplier: 0.5 }

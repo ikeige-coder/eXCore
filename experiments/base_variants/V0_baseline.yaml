@@ -1,0 +1,9 @@
+# V0: stock, evenly compressed layout. The reference point every variant is compared against.
+schema: excore/manifest@1
+track: CPU-35B
+name: v0-baseline
+description: Uniform Q4_K everywhere, lm_head kept at Q6_K.
+default: Q4_K
+rules:
+  - match: "lm_head"
+    format: Q6_K

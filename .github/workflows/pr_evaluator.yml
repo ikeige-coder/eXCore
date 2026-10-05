@@ -1,0 +1,62 @@
+# Evaluates miner PRs on a self-hosted validator and auto-merges frontier-advancing recipes.
+#
+# Recipes merged by the owner by hand are evaluated and recorded too, so they count like bot merges.
+# Owner overrides are labels: `excore-approve`, `excore-tier:<Ultra|XL|L|M|S>` (see evaluator/runbook.md).
+#
+# SECURITY: this workflow uses pull_request_target so it can comment and merge on fork PRs.
+# That is only safe because it NEVER checks out, installs or executes code from the PR. It
+# runs the base branch's code, and the bot reads the PR's single manifest file as text
+# through the API. Do not add steps that check out github.event.pull_request.head.*.
+name: pr-evaluator
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, closed, labeled]
+    paths:
+      - "manifests/**"
+
+# One evaluation at a time: the registry update and the host's benchmark must not overlap.
+concurrency:
+  group: excore-evaluator
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  evaluate:
+    # open PRs: evaluate. closed: only if it was merged (the owner may merge by hand; the bot records it).
+    # labeled: only excore-* labels (owner overrides) re-run an evaluation.
+    if: >
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'closed' || github.event.pull_request.merged == true) &&
+      (github.event.action != 'labeled' || startsWith(github.event.label.name, 'excore-'))
+    runs-on: [self-hosted, linux, excore-validator]
+    timeout-minutes: 360
+    steps:
+      - name: Check out the trusted base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Install eXCore (dependencies are preinstalled on the validator)
+        run: ${{ vars.EXCORE_PYTHON || 'python3' }} -m pip install -e . --no-deps --quiet
+
+      - name: Evaluate the pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EXCORE_SOURCE_GGUF: ${{ vars.EXCORE_SOURCE_GGUF }}
+          EXCORE_REFERENCE: ${{ vars.EXCORE_REFERENCE }}
+          EXCORE_WORKDIR: ${{ vars.EXCORE_WORKDIR }}
+          EXCORE_HOLDOUT_DIR: ${{ vars.EXCORE_HOLDOUT_DIR }}
+          EXCORE_LLAMA_QUANTIZE: ${{ vars.EXCORE_LLAMA_QUANTIZE }}
+          EXCORE_LLAMA_BENCH: ${{ vars.EXCORE_LLAMA_BENCH }}
+          EXCORE_REQUIRE_ISOLATION: ${{ vars.EXCORE_REQUIRE_ISOLATION }}
+        run: >
+          ${{ vars.EXCORE_PYTHON || 'python3' }} -m evaluator.bot_engine
+          --pr ${{ github.event.pull_request.number }}
+          --head-sha ${{ github.event.pull_request.head.sha }}
+          --branch ${{ github.event.repository.default_branch }}

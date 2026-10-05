@@ -1,0 +1,4 @@
+# Everything needs the owner's review, except miner recipes: the bot evaluates and merges those.
+# (Enforced once branch protection has "Require review from Code Owners" turned on.)
+*            @ikeige-coder
+/manifests/

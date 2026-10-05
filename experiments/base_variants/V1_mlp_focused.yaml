@@ -1,0 +1,17 @@
+# V1: initial search blueprint. Squeeze the MLP blocks (the bulk of the parameters)
+# while keeping attention and the output head at higher precision.
+schema: excore/manifest@1
+track: CPU-35B
+name: v1-mlp-focused
+description: MLP blocks at Q4_K, deep MLPs at Q3_K, attention at Q8_0, everything else Q5_K.
+default: Q5_K
+rules:
+  - match: "L*.mlp"
+    format: Q4_K
+  - match: "L*.mlp"
+    layers: "10-62"
+    format: Q3_K
+  - match: "L*.attn.*"
+    format: Q8_0
+  - match: "lm_head"
+    format: Q6_K
