@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from .core_frontier import Entry, Spectrum
+from .core_frontier import Spectrum
 
 W, H, ML, MR, MT, MB = 640, 420, 70, 24, 44, 56
 BG, TEXT, SUBTLE = "#0a0c0f", "#e9ecf0", "#8a96a6"

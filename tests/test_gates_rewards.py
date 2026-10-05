@@ -1,9 +1,7 @@
-import re
-
 import numpy as np
 import pytest
 
-from synthetic import Leaky, SyntheticBackend
+from synthetic import Leaky
 
 from excore.eval.accuracy import AccuracyResult
 from excore.eval.performance import PerfResult, PerfRun

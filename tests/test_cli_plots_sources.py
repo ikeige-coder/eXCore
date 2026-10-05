@@ -198,6 +198,5 @@ def test_empty_spectrum_renders(cfg):
 def test_plots_cli(spectrum, tmp_path, tiny_config):
     sp_file = tmp_path / "spectrum.json"
     spectrum.save(sp_file)
-    cfg = yaml.safe_load(Path(tiny_config).read_text())
     assert main(["plots", "--spectrum", str(sp_file), "--out-dir", str(tmp_path / "out")]) == 0
     assert len(list((tmp_path / "out").glob("*.svg"))) == 3

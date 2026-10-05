@@ -1,10 +1,9 @@
 import subprocess
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-from evaluator.bot_engine import BotEngine, Git, classify_files, render_report
+from evaluator.bot_engine import BotEngine, Git, classify_files
 from evaluator.github import ChangedFile, GitHubError, PullRequest
 from evaluator.runner import BaselinePerf, EvalBundle, EvalFailure
 from excore.eval.accuracy import AccuracyResult
@@ -316,7 +315,7 @@ def test_a_failing_registry_push_is_loud_but_the_pr_stays_merged(tmp_path, tiny_
 
 
 from evaluator.bot_engine import Override, apply_override, parse_override
-from excore.frontier import RewardDecision, Verdict, judge
+from excore.frontier import judge
 
 
 def merged_gh(**kw):
@@ -438,7 +437,6 @@ def test_override_cannot_duplicate_or_conjure_an_entry(repo, tiny_cfg, tiny_spec
     out = engine(repo, tiny_cfg, FakeGH(labels=("excore-tier:Ultra",)), FakeRunner()).handle_pr(7)
     assert out.stage == "duplicate"
     empty = Spectrum("CPU-35B", Space.from_config(tiny_cfg))
-    cand = Point("x", "x", 0.02, 1.2, 1.2, 14.0)
     v = judge(candidate_id="x", name="x", accuracy=acc(), perf=perf(), baseline_perf=BaselinePerf(10.0, 100.0, 20.0),
               guards=[], spectrum=empty, cfg=tiny_cfg)
     assert not v.accepted and apply_override(v, Override("core:XL", "l"), tiny_cfg) is v
