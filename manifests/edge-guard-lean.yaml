@@ -1,0 +1,18 @@
+schema: excore/manifest@1
+track: CPU-35B
+name: edge-guard-lean
+description: Q4_K body, Q3_K mid-depth MLPs to buy RAM back; first and last layers and attention kept precise.
+default: Q4_K
+rules:
+  - match: "L*.mlp"
+    layers: "16-67"
+    format: Q3_K
+  - match: "L*.mlp"
+    layers: "0-5,78-83"
+    format: Q6_K
+  - match: "L*.attn.*"
+    format: Q6_K
+  - match: "L*.gdn.out"
+    format: Q5_K
+  - match: "lm_head"
+    format: Q6_K
