@@ -50,9 +50,9 @@ def unpinned_reasons(lock: dict) -> list[str]:
     if not files:
         out.append("base model has no pinned files")
     for f in files:
-        if not HEX64.match(str(f.get("sha256") or "")):
+        if not HEX64.fullmatch(str(f.get("sha256") or "")):
             out.append(f"{f.get('name', '?')}: sha256 is not pinned")
-    if not COMMIT.match(str(lock.get("sources", {}).get("llama_cpp", {}).get("commit") or "")):
+    if not COMMIT.fullmatch(str(lock.get("sources", {}).get("llama_cpp", {}).get("commit") or "")):
         out.append("llama.cpp commit is not pinned")
     return out
 
@@ -124,7 +124,7 @@ def pin(lock_path: str | Path, root: str | Path, *, repo: str | None, revision: 
     base = lock["sources"]["base"]
     base.update(repo=repo, revision=revision, files=entries)
     if llama_cpp_commit:
-        if not COMMIT.match(llama_cpp_commit):
+        if not COMMIT.fullmatch(llama_cpp_commit):
             raise SourcesError("llama.cpp commit must be a full 40-character hash")
         lock["sources"]["llama_cpp"]["commit"] = llama_cpp_commit
     if is_pinned(lock):

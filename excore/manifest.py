@@ -187,7 +187,7 @@ def parse_manifest(text: str, spec: ModelSpec, *, expected_track: str = TRACK_DE
     if raw.get("track") != expected_track:
         problems.append(f"track must be {expected_track!r}")
     name = raw.get("name")
-    if not isinstance(name, str) or not NAME_RE.match(name):
+    if not isinstance(name, str) or not NAME_RE.fullmatch(name):
         problems.append("name must match [a-z0-9][a-z0-9._-]{0,63}")
         name = "invalid"
     description = raw.get("description", "")
@@ -223,7 +223,7 @@ def parse_manifest(text: str, spec: ModelSpec, *, expected_track: str = TRACK_DE
         for k in sorted(set(r) - _RULE_KEYS, key=str):
             problems.append(f"rule {i}: unknown key {k!r}")
         match = r.get("match")
-        if not isinstance(match, str) or not PATTERN_RE.match(match):
+        if not isinstance(match, str) or not PATTERN_RE.fullmatch(match):
             problems.append(f"rule {i}: match must be a glob over unit names (e.g. 'L*.mlp')")
             continue
         layers = None
@@ -261,9 +261,15 @@ def parse_manifest(text: str, spec: ModelSpec, *, expected_track: str = TRACK_DE
 
 def load_manifest(path: str | Path, spec: ModelSpec, *, expected_track: str = TRACK_DEFAULT) -> Manifest:
     p = Path(path)
-    if p.stat().st_size > MAX_BYTES:
-        raise ManifestError([f"{p.name}: manifest exceeds {MAX_BYTES} bytes"])
-    return parse_manifest(p.read_text(encoding="utf-8"), spec, expected_track=expected_track)
+    try:
+        if p.stat().st_size > MAX_BYTES:
+            raise ManifestError([f"{p.name}: manifest exceeds {MAX_BYTES} bytes"])
+        text = p.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ManifestError([f"cannot read manifest {str(path)!r}: {exc.strerror or exc}"]) from None
+    except UnicodeDecodeError:
+        raise ManifestError([f"{p.name}: manifest is not valid UTF-8 text"]) from None
+    return parse_manifest(text, spec, expected_track=expected_track)
 
 
 # -- expansion ----------------------------------------------------------------
