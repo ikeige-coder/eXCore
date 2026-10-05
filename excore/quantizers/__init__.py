@@ -127,7 +127,7 @@ _MODULE_FOR = {"runtime": "runtime_gguf", "rtn": "local_rtn"}
 
 
 def register(q: Quantizer) -> Quantizer:
-    if not NAME_RE.match(q.name):
+    if not NAME_RE.fullmatch(q.name):
         raise QuantizerError(f"bad quantizer name {q.name!r}; use [a-z][a-z0-9_]{{0,31}}")
     if q.name in _REGISTRY and type(_REGISTRY[q.name]) is not type(q):
         raise QuantizerError(f"quantizer {q.name!r} is already registered by another class")
@@ -153,7 +153,7 @@ def ensure_loaded(names: Iterable[str]) -> None:
     for name in names:
         if name in _REGISTRY:
             continue
-        if not NAME_RE.match(name):
+        if not NAME_RE.fullmatch(name):
             raise QuantizerError(f"bad quantizer name {name!r}")
         module = _MODULE_FOR.get(name, name)
         try:

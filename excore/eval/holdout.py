@@ -64,8 +64,8 @@ def epoch_now(today: _dt.date | None = None) -> int:
 
 def list_shards(root: str | Path) -> list[Path]:
     root = Path(root)
-    shards = [p for p in root.iterdir() if p.is_dir() and SHARD_RE.match(p.name) and (p / "reference.npz").exists()]
-    return sorted(shards, key=lambda p: int(SHARD_RE.match(p.name).group(1)))
+    shards = [p for p in root.iterdir() if p.is_dir() and SHARD_RE.fullmatch(p.name) and (p / "reference.npz").exists()]
+    return sorted(shards, key=lambda p: int(SHARD_RE.fullmatch(p.name).group(1)))
 
 
 def select_shard(root: str | Path | None = None, epoch: int | None = None) -> Path:

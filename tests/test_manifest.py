@@ -123,3 +123,35 @@ def test_default_only_checked_where_it_still_applies(spec):
     assert m.expand(spec)["lm_head"].format == "Q6_K"
     with pytest.raises(ManifestError, match="not a legal format"):
         parse("default: Q2_K\n", spec).expand(spec)
+
+
+def test_name_and_match_must_match_in_full(spec):
+    # '$' matches before a trailing newline, so these used to be accepted
+    base = "schema: excore/manifest@1\ntrack: CPU-35B\ndefault: Q4_K\n"
+    with pytest.raises(ManifestError, match="name must match"):
+        parse_manifest(base + 'name: "abc\\n"\n', spec)
+    with pytest.raises(ManifestError, match="match must be a glob"):
+        parse_manifest(base + 'name: abc\nrules:\n  - {match: "lm_head\\n", format: Q8_0}\n', spec)
+
+
+def test_load_manifest_reports_unreadable_files_cleanly(spec, tmp_path):
+    with pytest.raises(ManifestError, match="cannot read manifest"):
+        load_manifest(tmp_path / "missing.yaml", spec)
+    with pytest.raises(ManifestError, match="cannot read manifest"):
+        load_manifest(tmp_path, spec)                            # a directory
+    binary = tmp_path / "binary.yaml"
+    binary.write_bytes(b"\xff\xfe\x00 not utf-8")
+    with pytest.raises(ManifestError, match="not valid UTF-8"):
+        load_manifest(binary, spec)
+
+
+def test_pin_checks_use_the_whole_string():
+    from excore.sources import COMMIT, HEX64
+    assert HEX64.fullmatch("a" * 64) and not HEX64.fullmatch("a" * 64 + "\n")
+    assert COMMIT.fullmatch("b" * 40) and not COMMIT.fullmatch("b" * 40 + "\n")
+
+
+def test_check_reports_a_missing_manifest_without_a_traceback(tmp_path, capsys):
+    from excore.cli import main
+    assert main(["check", str(tmp_path / "nope.yaml")]) == 2
+    assert "cannot read manifest" in capsys.readouterr().err
