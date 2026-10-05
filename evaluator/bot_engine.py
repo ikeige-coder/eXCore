@@ -117,7 +117,7 @@ def parse_override(labels: Sequence[str], cfg: Mapping) -> tuple[Override | None
         elif low == APPROVE_LABEL:
             approve = label
     if len(tier_labels) > 1:
-        ignored += [f"`{label}` (conflicting tier labels)" for label, _ in tier_labels]
+        ignored += [f"`{l}` (conflicting tier labels)" for l, _ in tier_labels]
         tier_labels = []
     if tier_labels:
         return Override(tier_labels[0][1], tier_labels[0][0]), ignored
