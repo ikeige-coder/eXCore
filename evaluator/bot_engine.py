@@ -413,7 +413,7 @@ def build_engine(args) -> BotEngine:
         lock = require_pinned(root / "configs/sources.lock.json", source.parent, track=cfg["track"],
                               cache=workdir / "sources-verified.json")
     except SourcesError as exc:
-        raise SystemExit(f"refusing to run: {exc}")
+        raise SystemExit(f"refusing to run: {exc}") from None
     if source_gguf(lock, source.parent).resolve() != source.resolve():
         raise SystemExit("EXCORE_SOURCE_GGUF is not the file pinned in configs/sources.lock.json")
     sandbox = Sandbox(SandboxPolicy(timeout_s=float(cfg["limits"]["build_timeout_s"]) * 2,
